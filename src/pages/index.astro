@@ -1,0 +1,1089 @@
+---
+import Layout from '~/layouts/Layout.astro';
+import { Icon } from 'astro-icon/components';
+
+const metadata = {
+  title: 'PajakUMKM — Radio Pajak 0,5 FM',
+  ignoreTitleTemplate: true,
+  description:
+    'Kalkulator PPh final 0,5% buat UMKM: isi omzet 12 bulan, pajak per bulan + total tahunan langsung keluar. 100% di browser, tanpa server.',
+};
+
+const BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+const BULAN_SINGKAT = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+
+const PRESETS = [
+  { id: 'kopi', nama: 'Warung Kopi', omzet: [8200000, 7800000, 9100000, 8600000, 9400000, 10200000, 11500000, 10800000, 9900000, 10400000, 12100000, 14500000] },
+  { id: 'kelontong', nama: 'Toko Kelontong', omzet: [12500000, 11800000, 13200000, 12900000, 14100000, 15200000, 16800000, 15900000, 14700000, 15300000, 17100000, 19800000] },
+  { id: 'laundry', nama: 'Laundry Kiloan', omzet: [6200000, 5800000, 6700000, 6400000, 7100000, 7600000, 8200000, 7900000, 7300000, 7700000, 8400000, 9100000] },
+];
+
+const MARQUEE_A = ['PPh FINAL 0,5%', 'OMZET 12 BULAN', 'JATUH TEMPO TANGGAL 15', 'BATAS Rp4,8 M', 'BEBAS s.d. Rp500 JT'];
+const MARQUEE_B = ['Rp8.200.000', 'Rp41.000', 'Rp60.500', 'Rp99.000', 'Rp72.500'];
+const MARQUEE_C = ['WARUNG KOPI', 'TOKO KELONTONG', 'LAUNDRY', 'BAKSO', 'FOTOKOPI', 'BARBERSHOP'];
+---
+
+<Layout metadata={metadata}>
+  <!-- definisi filter stempel + pola gelombang frekuensi -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="stampRough" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"></feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="4"></feDisplacementMap>
+      </filter>
+      <filter id="dialRough" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"></feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5"></feDisplacementMap>
+      </filter>
+      <path id="circlePath" d="M 200,200 m -158,0 a 158,158 0 1,1 316,0 a 158,158 0 1,1 -316,0" fill="none"></path>
+    </defs>
+  </svg>
+
+  <div id="spotlight" aria-hidden="true"></div>
+
+  <a class="skip-link" href="#peta">Lewati ke peta frekuensi</a>
+
+  <div id="flash" class="flash hidden" role="status"></div>
+
+  <div id="deeplinkBanner" class="deeplink hidden" role="alert">
+    <p id="deeplinkInfo"></p>
+    <div class="deeplink-acts">
+      <button type="button" id="deeplinkMuat" class="btn btn-sm">Muat siaran ini</button>
+      <button type="button" id="deeplinkTutup" class="btn btn-sm">Abaikan</button>
+    </div>
+  </div>
+
+  <header class="masthead">
+    <button type="button" id="logoBtn" class="masthead-brand" aria-label="Radio Pajak 0,5 FM — ketuk 5 kali untuk siaran malam">
+      <span class="brand-radio">RADIO</span><span class="brand-pajak">PAJAK</span>
+      <span class="brand-fm">0,5 FM</span>
+    </button>
+    <p class="masthead-sub">stasiun hitung pajak UMKM · siaran setiap hari</p>
+    <button type="button" id="motionToggle" class="btn btn-sm" aria-pressed="true">Gerak: nyala</button>
+  </header>
+
+  <main id="main">
+    <!-- 0%: dial raksasa -->
+    <section id="meja" aria-labelledby="judul">
+      <div id="mejaStage">
+        <p class="kicker">Frekuensi 0,5 · Siaran hitung pajak · Penyiar: Pak Siaran</p>
+        <h1 id="judul" class="giant" aria-label="0,5 persen">
+          <span class="giant-num" id="giantNum">0,5<span class="giant-pct">%</span></span>
+        </h1>
+        <p class="lede">
+          PPh final buat UMKM cuma segini dari omzet. Isi omzet bulanan di bawah,
+          pajak per bulan + total setahun langsung keluar — tanpa server, tanpa daftar.
+        </p>
+        <p class="handwritten" id="pesanPenyiar">Selamat pagi, pendengar setia 0,5 FM. Omzetnya diisi dulu, Mas.</p>
+
+        <div class="dial-wrap">
+          <svg class="dial" viewBox="0 0 400 400" role="img" aria-label="Dial radio: jarum bergerak mengikuti total omzet tahunan terhadap batas Rp4,8 miliar">
+            <circle cx="200" cy="200" r="188" class="dial-ring"></circle>
+            <circle cx="200" cy="200" r="150" class="dial-face"></circle>
+            <g id="dialTicks"></g>
+            <text class="dial-text"><textPath href="#circlePath" startOffset="0">RADIO PAJAK • 0,5 FM • SIARAN HITUNG PAJAK • OMZET MASUK PAJAK KELUAR • </textPath></text>
+            <g id="jarum" class="jarum">
+              <line x1="200" y1="200" x2="200" y2="62"></line>
+              <circle cx="200" cy="200" r="14" class="jarum-hub"></circle>
+            </g>
+            <text x="200" y="330" text-anchor="middle" class="dial-center" id="dialLabel">Rp0</text>
+          </svg>
+          <p class="dial-caption">jarum = total omzet setahun vs batas Rp4,8 M</p>
+        </div>
+
+        <div class="quick">
+          <label class="quick-label" for="inputJan">Omzet Januari (Rp)</label>
+          <div class="quick-row">
+            <input id="inputJan" class="input-rp" type="text" inputmode="numeric" autocomplete="off" placeholder="contoh: 8.200.000" aria-describedby="errJan" />
+            <button type="button" id="btnHitung" class="btn btn-big">
+              <Icon name="ph:calculator-bold" class="btn-ic" /> Hitung pajak
+            </button>
+          </div>
+          <p id="errJan" class="err hidden" role="alert"></p>
+          <p class="quick-result" aria-live="polite">Pajak Januari: <strong id="pajakJan">Rp0</strong> · jatuh tempo <strong id="tempoJan">15 Feb 2026</strong></p>
+        </div>
+      </div>
+
+      <div class="marquee-band band-a" aria-hidden="true">
+        <div class="marquee-inner">
+          {[...MARQUEE_A, ...MARQUEE_A, ...MARQUEE_A, ...MARQUEE_A].map((t) => (
+            <span class="marquee-item"><Icon name="ph:radio-bold" class="marquee-ic" />{t}</span>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <div class="marquee-band band-b" aria-hidden="true">
+      <div class="marquee-inner reverse">
+        {[...MARQUEE_B, ...MARQUEE_B, ...MARQUEE_B, ...MARQUEE_B].map((t) => (
+          <span class="marquee-item"><Icon name="ph:coins-bold" class="marquee-ic" />{t}</span>
+        ))}
+      </div>
+    </div>
+
+    <!-- 25%: peta frekuensi — 12 stasiun bulan -->
+    <section id="peta" aria-labelledby="judulPeta">
+      <div class="section-head">
+        <p class="section-no" aria-hidden="true">01</p>
+        <h2 id="judulPeta" class="section-title">Peta frekuensi — 12 stasiun bulan</h2>
+        <p class="section-desc">Geser stripnya, ketuk stasiunnya, isi omzetnya. Pajak 0,5% tiap stasiun langsung keluar.</p>
+      </div>
+      <div class="strip-hint">
+        <Icon name="ph:arrows-left-right-bold" class="hint-ic" />
+        <span>seret strip ke kiri-kanan · <kbd>←</kbd> <kbd>→</kbd> buat geser pakai keyboard</span>
+      </div>
+      <div id="strip" class="strip" tabindex="0" role="region" aria-label="Daftar 12 bulan: geser horizontal">
+        {BULAN.map((b, i) => (
+          <article class="stasiun" data-bulan={i}>
+            <p class="stasiun-nama">{b} <span class="stasiun-kode">{BULAN_SINGKAT[i]}</span></p>
+            <label class="stasiun-label" for={`omzet-${i}`}>Omzet {b} (Rp)</label>
+            <input id={`omzet-${i}`} class="input-rp stasiun-input" type="text" inputmode="numeric" autocomplete="off" placeholder="0" data-bulan={i} />
+            <p class="stasiun-pajak">Pajak 0,5%: <strong class="stasiun-pajak-val" data-pajak={i}>Rp0</strong></p>
+            <p class="stasiun-tempo">Bayar s.d. <span data-tempo={i}>—</span></p>
+          </article>
+        ))}
+      </div>
+
+      <div class="preset-row" role="group" aria-label="Isi contoh usaha">
+        <span class="preset-label">Isi contoh:</span>
+        {PRESETS.map((p) => (
+          <button type="button" class="btn btn-sm preset-btn" data-preset={p.id}>
+            <Icon name="ph:storefront-bold" class="btn-ic" /> {p.nama}
+          </button>
+        ))}
+        <button type="button" class="btn btn-sm" id="btnKosongkan">
+          <Icon name="ph:trash-bold" class="btn-ic" /> Kosongkan
+        </button>
+      </div>
+
+      <div class="wp-row" role="group" aria-label="Jenis wajib pajak">
+        <span class="wp-label">Saya wajib pajak:</span>
+        <div class="wp-toggle">
+          <button type="button" class="wp-btn active" data-wp="op" aria-pressed="true">Orang pribadi</button>
+          <button type="button" class="wp-btn" data-wp="pt" aria-pressed="false">PT Perorangan</button>
+          <button type="button" class="wp-btn" data-wp="kop" aria-pressed="false">Koperasi</button>
+        </div>
+        <p class="wp-note" id="wpNote">Orang pribadi: bagian omzet s.d. Rp500 jt/tahun (dihitung kumulatif) tidak dipungut PPh final.</p>
+      </div>
+    </section>
+
+    <div class="marquee-band band-c" aria-hidden="true">
+      <div class="marquee-inner">
+        {[...MARQUEE_C, ...MARQUEE_C, ...MARQUEE_C, ...MARQUEE_C].map((t) => (
+          <span class="marquee-item"><Icon name="ph:storefront-bold" class="marquee-ic" />{t}</span>
+        ))}
+      </div>
+    </div>
+
+    <!-- 50%: rekap -->
+    <section id="rekap" aria-labelledby="judulRekap">
+      <div class="section-head">
+        <p class="section-no" aria-hidden="true">02</p>
+        <h2 id="judulRekap" class="section-title">Rekap siaran setahun</h2>
+        <p class="section-desc">Total omzet, total pajak, dan perbandingan tiap bulan. Angka dihitung langsung di browsermu.</p>
+      </div>
+
+      <div class="total-wrap" aria-live="polite">
+        <p class="total-label">Total pajak setahun (PPh final 0,5%)</p>
+        <p class="giant total-num" id="totalPajak">Rp0</p>
+        <p class="total-sub">dari total omzet <strong id="totalOmzet">Rp0</strong> · <span id="bulanTerisi">0</span> dari 12 bulan terisi</p>
+        <p class="stempel hidden" id="stempelBatas" aria-hidden="true">WASPADA</p>
+      </div>
+
+      <div class="batas-wrap">
+        <div class="batas-head">
+          <span>Omzet tahunan vs batas Rp4,8 M</span>
+          <strong id="batasPersen">0%</strong>
+        </div>
+        <div class="batas-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Omzet tahunan terhadap batas Rp4,8 miliar" id="batasBar">
+          <div class="batas-fill" id="batasFill"></div>
+          <div class="batas-mark" style="left: 10.42%"></div>
+        </div>
+        <p class="batas-note">Garis putus = Rp500 jt (batas bebas kumulatif untuk orang pribadi). Di atas Rp4,8 M/tahun: tetap final 0,5% sampai akhir tahun pajak ini, tahun depan wajib tarif umum + pembukuan. Omzet diuji agregasi seluruh usaha + keluarga.</p>
+      </div>
+
+      <div class="chart-wrap">
+        <p class="chart-title">Grafik omzet 12 bulan</p>
+        <svg id="chart" viewBox="0 0 720 220" role="img" aria-label="Grafik batang omzet 12 bulan"></svg>
+        <p class="chart-empty" id="chartEmpty">Belum ada siaran — isi satu bulan dulu, grafiknya muncul di sini.</p>
+      </div>
+
+      <div class="table-scroll">
+        <table class="rekap-tabel" id="rekapTabel">
+          <caption>Per bulan: omzet, pajak 0,5%, dan jatuh tempo bayar</caption>
+          <thead>
+            <tr><th scope="col">Bulan</th><th scope="col">Omzet</th><th scope="col">Pajak 0,5%</th><th scope="col">Naik/turun</th><th scope="col">Jatuh tempo</th></tr>
+          </thead>
+          <tbody id="rekapBody">
+            {BULAN.map((b) => (
+              <tr><td>{b}</td><td data-omzet-row>—</td><td data-pajak-row>—</td><td data-delta-row>—</td><td data-tempo-row>—</td></tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr><td>Total</td><td id="tfootOmzet">Rp0</td><td id="tfootPajak">Rp0</td><td id="tfootDelta">—</td><td>—</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- 75%: jadwal siaran (aturan pajak) -->
+    <section id="jadwal" aria-labelledby="judulJadwal">
+      <div class="section-head">
+        <p class="section-no" aria-hidden="true">03</p>
+        <h2 id="judulJadwal" class="section-title">Jadwal siaran — aturan mainnya</h2>
+        <p class="section-desc">Empat aturan yang dipakai kalkulator ini. Angka dan aturan merujuk ke peraturan resmi — cek tautannya sebelum bayar.</p>
+      </div>
+      <div class="aturan-grid">
+        <article class="aturan">
+          <Icon name="ph:percent-bold" class="aturan-ic" />
+          <h3>Tarif 0,5%</h3>
+          <p>PPh final 0,5% dari omzet bruto (bukan laba) tiap bulan. Dasar hukum: PP 55/2022 jo. PP 20/2026.</p>
+        </article>
+        <article class="aturan">
+          <Icon name="ph:flag-bold" class="aturan-ic" />
+          <h3>Batas Rp4,8 M</h3>
+          <p>Tarif final hanya untuk omzet (agregasi seluruh usaha + keluarga) s.d. Rp4,8 miliar per tahun. Lewat batas: tetap final sampai akhir tahun pajak ini, tahun depan tarif umum.</p>
+        </article>
+        <article class="aturan">
+          <Icon name="ph:gift-bold" class="aturan-ic" />
+          <h3>Bebas s.d. Rp500 jt</h3>
+          <p>Hanya orang pribadi: bagian omzet s.d. Rp500 juta per tahun (kumulatif sejak Januari) tidak dipungut; 0,5% hanya atas bagian di atasnya. PT Perorangan &amp; koperasi tidak dapat jatah ini.</p>
+        </article>
+        <article class="aturan">
+          <Icon name="ph:calendar-check-bold" class="aturan-ic" />
+          <h3>Bayar tanggal 15</h3>
+          <p>PPh final bulan berjalan dibayar paling lambat tanggal 15 bulan berikutnya (kode billing 411128-420). Lapor SPT Masa paling lambat tanggal 20.</p>
+        </article>
+        <article class="aturan">
+          <Icon name="ph:clock-bold" class="aturan-ic" />
+          <h3>Masa pakai tarif</h3>
+          <p>Orang pribadi &amp; PT Perorangan: tanpa batas waktu (PP 20/2026). Koperasi: maksimal 4 tahun sejak terdaftar. CV/PT biasa bukan penerima baru.</p>
+        </article>
+        <article class="aturan">
+          <Icon name="ph:warning-bold" class="aturan-ic" />
+          <h3>Bukan saran pajak</h3>
+          <p>Alat hitung contoh, bukan konsultasi pajak. Untuk kasus nyata, cek <a href="https://www.pajak.go.id" rel="noopener noreferrer">pajak.go.id</a> atau tanya konsultan.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 100%: bagikan -->
+    <section id="bagikan" aria-labelledby="judulBagikan">
+      <div class="section-head">
+        <p class="section-no" aria-hidden="true">04</p>
+        <h2 id="judulBagikan" class="section-title">Bagikan siarannya</h2>
+        <p class="section-desc">Simpan, unduh, atau kirim hasil hitungmu. Semua tersimpan di browsermu sendiri.</p>
+      </div>
+      <div class="aksi-grid">
+        <button type="button" class="btn btn-big" id="btnSalinWA"><Icon name="ph:chat-circle-text-bold" class="btn-ic" /> Salin ringkasan WA</button>
+        <button type="button" class="btn" id="btnCsv"><Icon name="ph:file-csv-bold" class="btn-ic" /> Unduh CSV</button>
+        <button type="button" class="btn" id="btnJson"><Icon name="ph:file-code-bold" class="btn-ic" /> Unduh JSON</button>
+        <button type="button" class="btn" id="btnCetak"><Icon name="ph:printer-bold" class="btn-ic" /> Cetak rekap</button>
+        <button type="button" class="btn" id="btnTautan"><Icon name="ph:link-bold" class="btn-ic" /> Salin tautan siaran</button>
+        <label class="btn file-btn" for="inputImpor"><Icon name="ph:upload-bold" class="btn-ic" /> Impor JSON</label>
+        <input id="inputImpor" type="file" accept="application/json,.json" aria-label="Impor data JSON" />
+      </div>
+      <div class="riwayat-wrap">
+        <h3>Riwayat tersimpan di browser ini</h3>
+        <ul id="riwayatList" class="riwayat-list"></ul>
+        <p class="riwayat-empty" id="riwayatEmpty">Belum ada riwayat. Tekan “Simpan siaran ini” setelah menghitung.</p>
+        <div class="riwayat-acts">
+          <button type="button" class="btn btn-sm" id="btnSimpan"><Icon name="ph:floppy-disk-bold" class="btn-ic" /> Simpan siaran ini</button>
+          <button type="button" class="btn btn-sm" id="btnHapusRiwayat"><Icon name="ph:trash-bold" class="btn-ic" /> Hapus semua riwayat</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="kaki">
+    <p class="handwritten kaki-sign">— Pak Siaran, 0,5 FM. Sampai jumpa di siaran berikut.</p>
+    <p class="kaki-note">PajakUMKM · kalkulator contoh PPh final 0,5% (PP 55/2022) · data hanya di browsermu · dibuat dengan Astro + Tailwind</p>
+    <p class="kaki-note">Ikon: Phosphor (isometrik) · Font: Jaini / Noto Sans Thai / Ruthie</p>
+  </footer>
+
+<style is:global>
+  /* PajakUMKM — hanya 2 ukuran font: biasa 16px + raksasa clamp */
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--px-bg);
+    color: var(--px-text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--px-accent); color: var(--px-bg); }
+  :focus-visible { outline: 3px solid var(--px-pop); outline-offset: 3px; border-radius: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .hidden { display: none !important; }
+  kbd { border: 1px solid var(--px-muted); border-radius: 4px; padding: 0 5px; font-family: var(--font-body); }
+
+  .skip-link {
+    position: absolute; left: 16px; top: -60px; z-index: 50;
+    background: var(--px-accent); color: var(--px-bg); padding: 12px 18px; font-weight: 700;
+    min-height: 44px; display: inline-flex; align-items: center;
+    transition: top 0.15s ease;
+  }
+  .skip-link:focus { top: 12px; }
+
+  .flash {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
+    background: var(--px-pop); color: var(--px-bg); font-weight: 700;
+    padding: 12px 20px; max-width: min(92vw, 560px); text-align: center;
+  }
+  .deeplink {
+    margin: 16px; padding: 16px; border: 2px dashed var(--px-accent);
+    background: var(--px-surface); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  }
+  .deeplink-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* tombol — micro-interactions: hover naik 1px 150ms, active scale .97 80ms */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 10px 18px; cursor: pointer;
+    background: var(--px-surface); color: var(--px-text);
+    border: 2px solid var(--px-text); font-family: var(--font-body); font-size: 16px; font-weight: 700;
+    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, color 0.15s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover { transform: translateY(-1px); background: var(--px-accent); color: var(--px-bg); border-color: var(--px-accent); }
+  }
+  .btn:active { transform: scale(0.97); transition-duration: 0.08s; }
+  .btn-sm { min-height: 44px; padding: 8px 14px; }
+  .btn-big { background: var(--px-accent); color: var(--px-bg); border-color: var(--px-accent); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-big:hover { background: var(--px-pop); border-color: var(--px-pop); }
+  }
+  .btn-ic { width: 20px; height: 20px; flex: none; }
+  .file-btn { cursor: pointer; }
+
+  .masthead {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    padding: 16px; border-bottom: 2px solid var(--px-text);
+  }
+  .masthead-brand {
+    display: flex; align-items: baseline; gap: 8px; background: none; border: 0; cursor: pointer;
+    font-family: var(--font-display); font-size: 16px; color: var(--px-text); padding: 10px 4px; min-height: 44px;
+  }
+  .brand-radio { color: var(--px-text); }
+  .brand-pajak { color: var(--px-accent); }
+  .brand-fm { background: var(--px-pop); color: var(--px-bg); padding: 2px 8px; }
+  .masthead-sub { color: var(--px-muted); margin: 0; }
+  #motionToggle { margin-left: auto; }
+
+  main { display: block; }
+  section { padding: 48px 16px; max-width: 1100px; margin: 0 auto; }
+  .kicker { color: var(--px-muted); margin: 0 0 8px; }
+  .giant {
+    font-family: var(--font-display);
+    font-size: clamp(4.5rem, 22vw, 13rem);
+    line-height: 0.9; margin: 0; letter-spacing: -0.02em; color: var(--px-text);
+  }
+  .giant-pct { color: var(--px-accent); }
+  .lede { max-width: 60ch; margin: 24px 0 8px; }
+  .handwritten { font-family: var(--font-accent); font-size: 16px; color: var(--px-pop); margin: 12px 0; }
+  #mejaStage { transition: transform 0.1s linear; will-change: transform; }
+
+  .dial-wrap { max-width: 420px; margin: 32px auto 8px; text-align: center; }
+  .dial { width: 100%; height: auto; filter: url(#dialRough); }
+  .dial-ring { fill: none; stroke: var(--px-text); stroke-width: 3; }
+  .dial-face { fill: var(--px-surface); stroke: var(--px-accent); stroke-width: 2; }
+  .dial-text { fill: var(--px-muted); font-size: 15px; letter-spacing: 3px; font-family: var(--font-body); }
+  .dial-center { fill: var(--px-text); font-size: 22px; font-weight: 700; font-family: var(--font-body); }
+  .jarum line { stroke: var(--px-pop); stroke-width: 6; stroke-linecap: round; }
+  .jarum-hub { fill: var(--px-pop); }
+  #jarum { transform-origin: 200px 200px; transform: rotate(-120deg); transition: transform 0.6s cubic-bezier(0.2, 0, 0, 1); }
+  .dial-caption { color: var(--px-muted); margin: 8px 0 0; }
+
+  .quick { max-width: 640px; margin: 32px auto 0; }
+  .quick-label { display: block; font-weight: 700; margin-bottom: 8px; }
+  .quick-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .input-rp {
+    flex: 1 1 220px; min-height: 44px; padding: 10px 14px; font-size: 16px; font-family: var(--font-body);
+    background: var(--px-surface); color: var(--px-text); border: 2px solid var(--px-text); border-radius: 0;
+  }
+  .input-rp:focus { border-color: var(--px-accent); outline: 3px solid var(--px-pop); outline-offset: 2px; }
+  .input-rp.invalid { border-color: var(--px-pop); animation: shake 0.4s ease; }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
+  .err { color: var(--px-pop); margin: 8px 0 0; font-weight: 700; }
+  .quick-result { margin: 16px 0 0; }
+  .quick-result strong { color: var(--px-accent); }
+
+  /* marquee: 3 band, arah berlawanan, skew ikut kecepatan scroll */
+  .marquee-band { overflow: hidden; border-top: 2px solid var(--px-text); border-bottom: 2px solid var(--px-text); padding: 10px 0; background: var(--px-surface); }
+  .band-a { background: var(--px-accent); color: var(--px-bg); }
+  .band-a .marquee-item { color: var(--px-bg); }
+  .band-b { background: var(--px-bg); }
+  .band-c { background: var(--px-accent-2); color: var(--px-bg); }
+  .band-c .marquee-item { color: var(--px-bg); }
+  .marquee-inner {
+    display: flex; gap: 32px; width: max-content;
+    animation: marquee 28s linear infinite;
+    transform: skewX(var(--skew, 0deg));
+  }
+  .marquee-inner.reverse { animation-direction: reverse; }
+  @keyframes marquee { from { transform: translateX(0) skewX(var(--skew, 0deg)); } to { transform: translateX(-50%) skewX(var(--skew, 0deg)); } }
+  .marquee-item { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+  .marquee-ic { width: 20px; height: 20px; }
+
+  .section-head { margin-bottom: 24px; position: relative; }
+  .section-no {
+    position: absolute; right: 0; top: -32px; margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(4.5rem, 22vw, 13rem); line-height: 1; color: var(--px-grid-big); z-index: 0;
+  }
+  .section-title { font-family: var(--font-display); font-size: 16px; font-weight: 400; margin: 0 0 8px; position: relative; z-index: 1; text-transform: uppercase; letter-spacing: 0.12em; color: var(--px-accent); }
+  .section-desc { margin: 0; max-width: 60ch; position: relative; z-index: 1; }
+  .strip-hint { display: flex; align-items: center; gap: 8px; color: var(--px-muted); margin-bottom: 12px; }
+  .hint-ic { width: 20px; height: 20px; }
+
+  .strip {
+    display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px;
+    scroll-snap-type: x mandatory; cursor: grab; touch-action: pan-y;
+    scrollbar-width: thin; overscroll-behavior-x: contain;
+  }
+  .strip.dragging { cursor: grabbing; scroll-snap-type: none; }
+  .stasiun {
+    flex: 0 0 260px; scroll-snap-align: start;
+    background: var(--px-surface); border: 2px solid var(--px-text); padding: 16px;
+  }
+  .stasiun-nama { font-weight: 700; margin: 0 0 12px; }
+  .stasiun-kode { color: var(--px-accent); }
+  .stasiun-label { display: block; color: var(--px-muted); margin-bottom: 6px; }
+  .stasiun-input { width: 100%; }
+  .stasiun-pajak { margin: 12px 0 4px; }
+  .stasiun-pajak-val { color: var(--px-accent); }
+  .stasiun-tempo { color: var(--px-muted); margin: 0; }
+
+  .preset-row, .wp-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 20px; }
+  .preset-label, .wp-label { font-weight: 700; }
+  .wp-toggle { display: inline-flex; border: 2px solid var(--px-text); }
+  .wp-btn { min-height: 44px; min-width: 44px; padding: 8px 16px; background: transparent; color: var(--px-text); border: 0; cursor: pointer; font-family: var(--font-body); font-size: 16px; font-weight: 700; }
+  .wp-btn.active { background: var(--px-accent); color: var(--px-bg); }
+  .wp-note { width: 100%; color: var(--px-muted); margin: 4px 0 0; }
+
+  .total-wrap { text-align: center; padding: 32px 16px; border: 2px solid var(--px-text); background: var(--px-surface); position: relative; }
+  .total-label { margin: 0 0 8px; color: var(--px-muted); }
+  .total-num { margin: 0; }
+  .total-sub { margin: 12px 0 0; }
+  .total-sub strong { color: var(--px-accent); }
+  .stempel {
+    position: absolute; top: 16px; right: 16px; margin: 0; transform: rotate(-8deg);
+    border: 3px solid var(--px-pop); color: var(--px-pop); padding: 4px 12px; font-weight: 700;
+    filter: url(#stampRough);
+  }
+
+  .batas-wrap { margin-top: 24px; }
+  .batas-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .batas-bar { position: relative; height: 24px; background: var(--px-surface); border: 2px solid var(--px-text); }
+  .batas-fill { height: 100%; width: 0%; background: var(--px-accent); transition: width 0.4s ease-out; }
+  .batas-mark { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed var(--px-pop); }
+  .batas-note { color: var(--px-muted); margin: 8px 0 0; }
+
+  .chart-wrap { margin-top: 32px; }
+  .chart-title { font-weight: 700; margin: 0 0 8px; }
+  #chart { width: 100%; height: auto; display: block; }
+  #chart rect { fill: var(--px-accent); }
+  #chart rect.pajak-bar { fill: var(--px-pop); }
+  #chart text { fill: var(--px-muted); font-size: 12px; font-family: var(--font-body); }
+  .chart-empty { color: var(--px-muted); }
+
+  .table-scroll { overflow-x: auto; margin-top: 32px; }
+  .rekap-tabel { width: 100%; border-collapse: collapse; min-width: 640px; }
+  .rekap-tabel caption { text-align: left; font-weight: 700; margin-bottom: 8px; }
+  .rekap-tabel th, .rekap-tabel td { border: 1px solid var(--px-muted); padding: 10px 12px; text-align: left; }
+  .rekap-tabel th { background: var(--px-surface); color: var(--px-accent); }
+  .rekap-tabel tfoot td { font-weight: 700; background: var(--px-surface); }
+  .delta-naik { color: var(--px-pop); }
+  .delta-turun { color: var(--px-accent); }
+
+  .aturan-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .aturan { border: 2px solid var(--px-text); background: var(--px-surface); padding: 16px; }
+  .aturan-ic { width: 28px; height: 28px; color: var(--px-accent); }
+  .aturan h3 { margin: 8px 0; font-size: 16px; }
+  .aturan p { margin: 0; }
+  .aturan a { color: var(--px-pop); }
+
+  .aksi-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .riwayat-wrap { margin-top: 32px; border: 2px solid var(--px-text); padding: 16px; background: var(--px-surface); }
+  .riwayat-wrap h3 { margin: 0 0 12px; font-size: 16px; }
+  .riwayat-list { list-style: none; margin: 0 0 12px; padding: 0; }
+  .riwayat-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--px-muted); }
+  .riwayat-empty { color: var(--px-muted); margin: 0 0 12px; }
+  .riwayat-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .kaki { padding: 32px 16px 48px; border-top: 2px solid var(--px-text); text-align: center; }
+  .kaki-sign { font-size: 16px; }
+  .kaki-note { color: var(--px-muted); margin: 4px 0; }
+
+  /* reveal: opacity+translate di section (JANGAN clip-path di elemen yang
+     diobserve — clip-path bikin IntersectionObserver lapor "tidak terlihat"
+     selamanya). Morph blob mask hanya di .total-wrap, dipicu class .in parent. */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0, 0, 1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .total-wrap { clip-path: circle(0% at 50% 50%); transition: clip-path 0.6s cubic-bezier(0.2, 0, 0, 1); }
+  .reveal.in .total-wrap { clip-path: circle(150% at 50% 50%); }
+
+  #spotlight {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background: radial-gradient(320px circle at var(--sx, 50%) var(--sy, 40%), oklch(0.82 0.247 291 / 0.12), transparent 70%);
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  @media (pointer: fine) {
+    body.spot-on #spotlight { opacity: 1; }
+  }
+
+  #inputImpor { position: absolute; width: 44px; height: 44px; opacity: 0; pointer-events: none; }
+
+  /* mode malam (easter egg) */
+  body.malam { --pop: oklch(0.88 0.28 320); --accent: oklch(0.8 0.25 320); }
+
+  /* gerak mati */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .marquee-inner { animation: none; }
+    #jarum { transition: none; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .total-wrap { clip-path: none; transition: none; }
+    #mejaStage { transition: none; }
+  }
+  html.no-motion .marquee-inner { animation-play-state: paused; }
+  html.no-motion #jarum { transition: none; }
+  html.no-motion .reveal { opacity: 1; transform: none; transition: none; }
+  html.no-motion .total-wrap { clip-path: none; transition: none; }
+  html.no-motion #mejaStage { transition: none; }
+  html.no-motion #spotlight { opacity: 0 !important; }
+
+  @media (max-width: 640px) {
+    section { padding: 32px 16px; }
+    .quick-row { flex-direction: column; }
+    .quick-row .btn { width: 100%; }
+    .stasiun { flex-basis: 230px; }
+  }
+
+  @media print {
+    .masthead, .marquee-band, .aksi-grid, .preset-row, .strip-hint, #motionToggle, .skip-link, #spotlight, .deeplink { display: none !important; }
+    body { background: #fff; color: #000; }
+    .reveal { opacity: 1; transform: none; }
+    .total-wrap { clip-path: none; }
+    section { padding: 12px 0; }
+  }
+</style>
+
+<script define:vars={{ PRESETS, BULAN }}>
+  const TARIF = 0.005;
+  const BATAS = 4800000000;
+  const BEBAS_OP = 500000000;
+  const TAHUN = 2026;
+  const LS_KEY = 'pajakumkm:v1';
+  const LS_RIWAYAT = 'pajakumkm:riwayat:v1';
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  const fmtRp = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
+  const parseRp = (s) => {
+    const d = String(s || '').replace(/[^\d]/g, '');
+    if (d === '') return null;
+    const n = Number(d);
+    return Number.isFinite(n) ? n : NaN;
+  };
+  const fmtTanggal = (d) => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const tempoBulan = (i) => {
+    const m = (i + 1) % 12;
+    const y = i === 11 ? TAHUN + 1 : TAHUN;
+    return new Date(y, m, 15);
+  };
+
+  let state = { wp: 'op', omzet: Array(12).fill(null) };
+  const normWp = (w) => (w === 'pt' || w === 'kop' ? w : (w === 'badan' ? 'pt' : 'op'));
+  const namaWp = (w) => (w === 'op' ? 'Orang pribadi' : w === 'pt' ? 'PT Perorangan' : 'Koperasi');
+  let displayedTotal = 0;
+
+  // PP 55/2022 jo. PP 20/2026: OP dapat jatah bebas Rp500 jt KUMULATIF setahun —
+  // 0,5% hanya atas bagian omzet di atas Rp500 jt. PT Perorangan & koperasi:
+  // 0,5% sejak rupiah pertama.
+  function hitung() {
+    const omzet = state.omzet.map((v) => (v == null ? 0 : v));
+    const totalOmzet = omzet.reduce((a, b) => a + b, 0);
+    let pajak;
+    if (state.wp === 'op') {
+      let cum = 0, cumPajak = 0;
+      pajak = omzet.map((o) => {
+        cum += o;
+        const kena = Math.max(0, cum - BEBAS_OP) * TARIF;
+        const p = Math.max(0, kena - cumPajak);
+        cumPajak = kena;
+        return p;
+      });
+    } else {
+      pajak = omzet.map((o) => (o > 0 ? o * TARIF : 0));
+    }
+    const totalPajak = pajak.reduce((a, b) => a + b, 0);
+    const terisi = state.omzet.filter((v) => v != null && v > 0).length;
+    return { omzet, totalOmzet, pajak, totalPajak, terisi };
+  }
+
+  function countUp(el, dari, ke, dur) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('no-motion')) {
+      el.textContent = fmtRp(ke);
+      return;
+    }
+    const t0 = performance.now();
+    const step = (t) => {
+      const p = Math.min((t - t0) / dur, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmtRp(dari + (ke - dari) * e);
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function render() {
+    const h = hitung();
+    // input Januari + hasil cepat
+    const jan = $('#inputJan');
+    if (document.activeElement !== jan) jan.value = state.omzet[0] == null ? '' : state.omzet[0].toLocaleString('id-ID');
+    $('#pajakJan').textContent = fmtRp(h.pajak[0]);
+    $('#tempoJan').textContent = fmtTanggal(tempoBulan(0));
+    // stasiun
+    $$('.stasiun').forEach((card, i) => {
+      const inp = $('.stasiun-input', card);
+      if (document.activeElement !== inp) inp.value = state.omzet[i] == null ? '' : state.omzet[i].toLocaleString('id-ID');
+      $('.stasiun-pajak-val', card).textContent = fmtRp(h.pajak[i]);
+      $('[data-tempo]', card).textContent = state.omzet[i] ? fmtTanggal(tempoBulan(i)) : '—';
+    });
+    // total + jarum + stempel
+    countUp($('#totalPajak'), displayedTotal, h.totalPajak, 400);
+    displayedTotal = h.totalPajak;
+    $('#totalOmzet').textContent = fmtRp(h.totalOmzet);
+    $('#bulanTerisi').textContent = h.terisi;
+    const pct = Math.min(h.totalOmzet / BATAS, 1);
+    $('#jarum').style.transform = 'rotate(' + (-120 + 240 * pct) + 'deg)';
+    $('#dialLabel').textContent = fmtRp(h.totalOmzet);
+    const persen = Math.round((h.totalOmzet / BATAS) * 100);
+    $('#batasPersen').textContent = persen + '%';
+    $('#batasFill').style.width = Math.min(persen, 100) + '%';
+    $('#batasBar').setAttribute('aria-valuenow', String(Math.min(persen, 100)));
+    const stempel = $('#stempelBatas');
+    if (h.totalOmzet > BATAS) {
+      stempel.textContent = 'LEWAT BATAS';
+      stempel.classList.remove('hidden');
+    } else if (state.wp === 'op' && h.totalOmzet > 0 && h.totalOmzet <= BEBAS_OP) {
+      stempel.textContent = 'BEBAS 0%';
+      stempel.classList.remove('hidden');
+    } else {
+      stempel.classList.add('hidden');
+    }
+    // tabel
+    const rows = $$('#rekapBody tr');
+    rows.forEach((tr, i) => {
+      const o = state.omzet[i];
+      $('[data-omzet-row]', tr).textContent = o == null ? '—' : fmtRp(o);
+      $('[data-pajak-row]', tr).textContent = o == null ? '—' : fmtRp(h.pajak[i]);
+      const prev = i > 0 ? state.omzet[i - 1] : null;
+      const dEl = $('[data-delta-row]', tr);
+      if (o == null || prev == null || prev === 0) { dEl.textContent = '—'; dEl.className = ''; }
+      else {
+        const d = ((o - prev) / prev) * 100;
+        dEl.textContent = (d >= 0 ? '▲ +' : '▼ ') + Math.abs(d).toFixed(1).replace('.', ',') + '%';
+        dEl.className = d >= 0 ? 'delta-naik' : 'delta-turun';
+      }
+      $('[data-tempo-row]', tr).textContent = o == null ? '—' : fmtTanggal(tempoBulan(i));
+    });
+    $('#tfootOmzet').textContent = fmtRp(h.totalOmzet);
+    $('#tfootPajak').textContent = fmtRp(h.totalPajak);
+    const first = state.omzet.find((v) => v != null);
+    const last = [...state.omzet].reverse().find((v) => v != null);
+    $('#tfootDelta').textContent = first == null || last == null || first === 0 ? '—' : ((last - first) / first * 100).toFixed(1).replace('.', ',') + '% setahun';
+    // grafik
+    renderChart(h.omzet);
+    // catatan WP
+    $('#wpNote').textContent = state.wp === 'op'
+      ? 'Orang pribadi: bagian omzet s.d. Rp500 jt/tahun (kumulatif sejak Januari) tidak dipungut PPh final; 0,5% hanya atas bagian di atas Rp500 jt. Tanpa batas waktu (PP 20/2026).'
+      : state.wp === 'pt'
+        ? 'PT Perorangan: 0,5% sejak rupiah pertama, tanpa pembebasan Rp500 jt. Tanpa batas waktu (PP 20/2026).'
+        : 'Koperasi: 0,5% sejak rupiah pertama, tanpa pembebasan Rp500 jt. Maksimal 4 tahun sejak terdaftar (PP 20/2026).';
+    saveState();
+  }
+
+  function renderChart(omzet) {
+    const svg = $('#chart');
+    const maks = Math.max.apply(null, omzet.concat([1]));
+    const W = 720, H = 220, BW = 44, GAP = (W - BW * 12) / 13;
+    let s = '';
+    omzet.forEach((v, i) => {
+      const x = GAP + i * (BW + GAP);
+      const hgt = Math.max(v > 0 ? 8 : 0, (v / maks) * 170);
+      const y = 190 - hgt;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + BW + '" height="' + hgt + '"><title>' + BULAN[i] + ': ' + fmtRp(v) + '</title></rect>';
+      s += '<text x="' + (x + BW / 2) + '" y="210" text-anchor="middle">' + BULAN[i].slice(0, 3).toUpperCase() + '</text>';
+    });
+    svg.innerHTML = s;
+    $('#chartEmpty').classList.toggle('hidden', omzet.some((v) => v > 0));
+  }
+
+  let saveTimer = null;
+  function saveState() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ v: 1, wp: state.wp, omzet: state.omzet })); } catch (e) {}
+    }, 200);
+  }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d || d.v !== 1 || !Array.isArray(d.omzet) || d.omzet.length !== 12) return;
+      state.wp = normWp(d.wp);
+      state.omzet = d.omzet.map((v) => (typeof v === 'number' && v >= 0 ? v : null));
+      $$('.wp-btn').forEach((b) => {
+        const on = b.dataset.wp === state.wp;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+    } catch (e) {}
+  }
+
+  function flash(msg) {
+    const f = $('#flash');
+    f.textContent = msg;
+    f.classList.remove('hidden');
+    clearTimeout(f._t);
+    f._t = setTimeout(() => f.classList.add('hidden'), 3500);
+  }
+
+  function validasiInput(inp) {
+    const raw = inp.value.trim();
+    if (raw === '') return null;
+    if (/[a-zA-Z]/.test(raw)) {
+      inp.classList.add('invalid');
+      return NaN;
+    }
+    const v = parseRp(raw);
+    if (Number.isNaN(v)) {
+      inp.classList.add('invalid');
+      return NaN;
+    }
+    inp.classList.remove('invalid');
+    return v;
+  }
+
+  function bindInput(inp, idx, errEl) {
+    inp.addEventListener('blur', () => {
+      const v = validasiInput(inp);
+      if (Number.isNaN(v)) {
+        if (errEl) { errEl.textContent = 'Pak Siaran: angkanya cuma digit, Mas — contoh: 8.200.000.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (errEl) errEl.classList.add('hidden');
+      state.omzet[idx] = v;
+      inp.value = v == null ? '' : v.toLocaleString('id-ID');
+      render();
+    });
+    inp.addEventListener('input', () => inp.classList.remove('invalid'));
+  }
+  bindInput($('#inputJan'), 0, $('#errJan'));
+  $$('.stasiun-input').forEach((inp) => bindInput(inp, Number(inp.dataset.bulan), null));
+
+  $('#btnHitung').addEventListener('click', () => {
+    const v = validasiInput($('#inputJan'));
+    if (Number.isNaN(v)) {
+      $('#errJan').textContent = 'Pak Siaran: angkanya cuma digit, Mas — contoh: 8.200.000.';
+      $('#errJan').classList.remove('hidden');
+      $('#inputJan').focus();
+      return;
+    }
+    state.omzet[0] = v;
+    render();
+    const h = hitung();
+    flash('Pajak Januari ' + fmtRp(h.pajak[0]) + ' — bayar paling lambat ' + fmtTanggal(tempoBulan(0)) + '.');
+    $('#rekap').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  $$('.preset-btn').forEach((b) => b.addEventListener('click', () => {
+    const p = PRESETS.find((x) => x.id === b.dataset.preset);
+    if (!p) return;
+    state.omzet = p.omzet.slice();
+    render();
+    $('#pesanPenyiar').textContent = 'Ini contoh ' + p.nama + ', Mas. Ganti angkanya dengan omzetmu sendiri.';
+    flash('Contoh ' + p.nama + ' dimuat — ' + fmtRp(hitung().totalOmzet) + ' setahun.');
+  }));
+  $('#btnKosongkan').addEventListener('click', () => {
+    state.omzet = Array(12).fill(null);
+    render();
+    $('#pesanPenyiar').textContent = 'Frekuensi dikosongkan. Isi lagi dari Januari, Mas.';
+  });
+
+  $$('.wp-btn').forEach((b) => b.addEventListener('click', () => {
+    state.wp = b.dataset.wp;
+    $$('.wp-btn').forEach((x) => {
+      const on = x === b;
+      x.classList.toggle('active', on);
+      x.setAttribute('aria-pressed', String(on));
+    });
+    render();
+  }));
+
+  // ekspor / salin / cetak
+  function unduh(nama, isi, tipe) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([isi], { type: tipe }));
+    a.download = nama;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function ringkasanWA() {
+    const h = hitung();
+    const baris = state.omzet.map((v, i) => BULAN[i] + ': ' + (v == null ? '-' : fmtRp(v) + ' → pajak ' + fmtRp(h.pajak[i]))).filter((_, i) => state.omzet[i] != null);
+    return 'RADIO PAJAK 0,5 FM — hitung PPh final UMKM\n'
+      + 'WP: ' + namaWp(state.wp) + '\n'
+      + (baris.join('\n') || '(belum ada omzet terisi)') + '\n'
+      + 'Total omzet setahun: ' + fmtRp(h.totalOmzet) + '\n'
+      + 'Total pajak 0,5%: ' + fmtRp(h.totalPajak) + '\n'
+      + 'Hitung sendiri di: ' + location.href.split('?')[0];
+  }
+  async function salinTeks(teks, okMsg) {
+    try { await navigator.clipboard.writeText(teks); flash(okMsg); }
+    catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = teks;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); flash(okMsg); } catch (e2) { flash('Gagal menyalin — izinkan clipboard dulu, Mas.'); }
+      ta.remove();
+    }
+  }
+  $('#btnSalinWA').addEventListener('click', () => salinTeks(ringkasanWA(), 'Ringkasan tersalin — tinggal tempel di WA.'));
+  $('#btnCsv').addEventListener('click', () => {
+    const h = hitung();
+    let csv = 'Bulan,Omzet (Rp),Pajak 0,5% (Rp),Jatuh tempo\n';
+    state.omzet.forEach((v, i) => { csv += BULAN[i] + ',' + (v || 0) + ',' + h.pajak[i] + ',' + (v ? fmtTanggal(tempoBulan(i)) : '-') + '\n'; });
+    csv += 'Total,' + h.totalOmzet + ',' + h.totalPajak + ',-\n';
+    unduh('pajakumkm-' + TAHUN + '.csv', csv, 'text/csv');
+    flash('CSV terunduh.');
+  });
+  $('#btnJson').addEventListener('click', () => {
+    unduh('pajakumkm-' + TAHUN + '.json', JSON.stringify({ v: 1, wp: state.wp, omzet: state.omzet }, null, 2), 'application/json');
+    flash('JSON terunduh.');
+  });
+  $('#btnCetak').addEventListener('click', () => window.print());
+  $('#btnTautan').addEventListener('click', () => {
+    const kode = btoa(unescape(encodeURIComponent(JSON.stringify({ v: 1, wp: state.wp, omzet: state.omzet })))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    salinTeks(location.origin + location.pathname + '?pajak=' + kode, 'Tautan siaran tersalin — buka di tab baru buat cek.');
+  });
+  $('#inputImpor').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(String(r.result));
+        if (!d || d.v !== 1 || !Array.isArray(d.omzet) || d.omzet.length !== 12) throw new Error('skema');
+        state.wp = normWp(d.wp);
+        state.omzet = d.omzet.map((v) => (typeof v === 'number' && v >= 0 ? v : null));
+        $$('.wp-btn').forEach((b) => { const on = b.dataset.wp === state.wp; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+        render();
+        flash('Siaran dari file dimuat.');
+      } catch (err) { flash('File-nya bukan siaran PajakUMKM, Mas — cek lagi JSON-nya.'); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+
+  // riwayat
+  function bacaRiwayat() {
+    try { const d = JSON.parse(localStorage.getItem(LS_RIWAYAT) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; }
+  }
+  function renderRiwayat() {
+    const list = bacaRiwayat();
+    const ul = $('#riwayatList');
+    ul.innerHTML = '';
+    $('#riwayatEmpty').classList.toggle('hidden', list.length > 0);
+    list.slice().reverse().forEach((item, ri) => {
+      const li = document.createElement('li');
+      const idx = list.length - 1 - ri;
+      li.innerHTML = '<span><strong>' + item.nama + '</strong> — omzet ' + fmtRp(item.totalOmzet) + ' · pajak ' + fmtRp(item.totalPajak) + '</span>';
+      const muat = document.createElement('button');
+      muat.type = 'button'; muat.className = 'btn btn-sm'; muat.textContent = 'Muat';
+      muat.addEventListener('click', () => {
+        state.wp = item.state.wp; state.omzet = item.state.omzet.slice();
+        $$('.wp-btn').forEach((b) => { const on = b.dataset.wp === state.wp; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+        render();
+        flash('Riwayat "' + item.nama + '" dimuat.');
+      });
+      const hapus = document.createElement('button');
+      hapus.type = 'button'; hapus.className = 'btn btn-sm'; hapus.textContent = 'Hapus';
+      hapus.addEventListener('click', () => {
+        const l = bacaRiwayat(); l.splice(idx, 1);
+        localStorage.setItem(LS_RIWAYAT, JSON.stringify(l));
+        renderRiwayat();
+      });
+      li.append(muat, hapus);
+      ul.appendChild(li);
+    });
+  }
+  $('#btnSimpan').addEventListener('click', () => {
+    const h = hitung();
+    const list = bacaRiwayat();
+    const nama = 'Siaran ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    list.push({ nama, ts: Date.now(), totalOmzet: h.totalOmzet, totalPajak: h.totalPajak, state: { wp: state.wp, omzet: state.omzet.slice() } });
+    try { localStorage.setItem(LS_RIWAYAT, JSON.stringify(list.slice(-10))); } catch (e) {}
+    renderRiwayat();
+    flash('Siaran disimpan di browser ini.');
+  });
+  $('#btnHapusRiwayat').addEventListener('click', () => {
+    localStorage.removeItem(LS_RIWAYAT);
+    renderRiwayat();
+    flash('Riwayat dihapus.');
+  });
+
+  // deep-link
+  (function deepLink() {
+    const q = new URLSearchParams(location.search).get('pajak');
+    if (!q) return;
+    try {
+      const d = JSON.parse(decodeURIComponent(escape(atob(q.replace(/-/g, '+').replace(/_/g, '/')))));
+      if (!d || d.v !== 1 || !Array.isArray(d.omzet) || d.omzet.length !== 12) throw new Error('skema');
+      const h0 = d.omzet.reduce((a, b) => a + (b || 0), 0);
+      // pratinjau pajak kiriman dengan logika yang sama (OP: kumulatif di atas Rp500 jt)
+      let p0 = 0;
+      if (normWp(d.wp) === 'op') { let cum = 0, cumP = 0; d.omzet.forEach((o) => { cum += o || 0; const kena = Math.max(0, cum - BEBAS_OP) * TARIF; p0 += Math.max(0, kena - cumP); cumP = kena; }); }
+      else p0 = h0 * TARIF;
+      $('#deeplinkInfo').textContent = 'Ada siaran kiriman: omzet ' + fmtRp(h0) + ' setahun, pajak ' + fmtRp(p0) + '. Muat?';
+      $('#deeplinkBanner').classList.remove('hidden');
+      $('#deeplinkMuat').addEventListener('click', () => {
+        state.wp = normWp(d.wp);
+        state.omzet = d.omzet.map((v) => (typeof v === 'number' && v >= 0 ? v : null));
+        $$('.wp-btn').forEach((b) => { const on = b.dataset.wp === state.wp; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+        render();
+        $('#deeplinkBanner').classList.add('hidden');
+        flash('Siaran kiriman dimuat.');
+      });
+      $('#deeplinkTutup').addEventListener('click', () => $('#deeplinkBanner').classList.add('hidden'));
+    } catch (e) {
+      $('#deeplinkInfo').textContent = 'Tautan siarannya rusak, Mas — kode pajaknya tidak bisa dibaca.';
+      $('#deeplinkBanner').classList.remove('hidden');
+      $('#deeplinkMuat').classList.add('hidden');
+      $('#deeplinkTutup').addEventListener('click', () => $('#deeplinkBanner').classList.add('hidden'));
+    }
+  })();
+
+  // dial ticks
+  (function ticks() {
+    const g = $('#dialTicks');
+    let s = '';
+    for (let i = 0; i <= 24; i++) {
+      const a = (-120 + i * 10) * Math.PI / 180;
+      const r1 = i % 6 === 0 ? 168 : 178, r2 = 186;
+      const x1 = 200 + r1 * Math.sin(a), y1 = 200 - r1 * Math.cos(a);
+      const x2 = 200 + r2 * Math.sin(a), y2 = 200 - r2 * Math.cos(a);
+      s += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="var(--px-text)" stroke-width="' + (i % 6 === 0 ? 3 : 1.5) + '"/>';
+    }
+    g.innerHTML = s;
+  })();
+
+  // gerak: zoom hero saat scroll + skew marquee ikut kecepatan scroll
+  const meja = $('#mejaStage');
+  let lastY = window.scrollY, lastT = performance.now(), skew = 0;
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      const now = performance.now();
+      const v = (y - lastY) / Math.max(now - lastT, 1);
+      lastY = y; lastT = now;
+      skew = Math.max(-8, Math.min(8, v * 12));
+      document.documentElement.style.setProperty('--skew', skew.toFixed(2) + 'deg');
+      const p = Math.min(Math.max(y / (window.innerHeight || 800), 0), 1);
+      meja.style.transform = 'scale(' + (1 + 0.12 * p) + ')';
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // reveal sections (morph blob mask)
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  $$('main section').forEach((s) => { s.classList.add('reveal'); io.observe(s); });
+
+  // spotlight kursor (desktop saja)
+  if (window.matchMedia('(pointer: fine)').matches) {
+    document.body.classList.add('spot-on');
+    window.addEventListener('pointermove', (e) => {
+      const sp = $('#spotlight');
+      sp.style.setProperty('--sx', e.clientX + 'px');
+      sp.style.setProperty('--sy', e.clientY + 'px');
+    }, { passive: true });
+  }
+
+  // strip: drag + inertia + keyboard
+  const strip = $('#strip');
+  let dragging = false, startX = 0, startScroll = 0, vel = 0, rafId = null;
+  strip.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('input,button')) return;
+    dragging = true; startX = e.clientX; startScroll = strip.scrollLeft; vel = 0;
+    strip.classList.add('dragging');
+    cancelAnimationFrame(rafId);
+  });
+  strip.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    vel = dx - (strip._lastDx || 0);
+    strip._lastDx = dx;
+    strip.scrollLeft = startScroll - dx;
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    strip.classList.remove('dragging');
+    strip._lastDx = 0;
+    const step = () => {
+      vel *= 0.92;
+      if (Math.abs(vel) < 0.5) return;
+      strip.scrollLeft -= vel;
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  };
+  strip.addEventListener('pointerup', endDrag);
+  strip.addEventListener('pointercancel', endDrag);
+  strip.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { strip.scrollLeft += 272; e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { strip.scrollLeft -= 272; e.preventDefault(); }
+  });
+
+  // toggle gerak (juga menjeda marquee — WCAG 2.2.2)
+  const motionBtn = $('#motionToggle');
+  const setMotion = (on) => {
+    document.documentElement.classList.toggle('no-motion', !on);
+    motionBtn.setAttribute('aria-pressed', String(on));
+    motionBtn.textContent = 'Gerak: ' + (on ? 'nyala' : 'mati');
+  };
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setMotion(false);
+  motionBtn.addEventListener('click', () => setMotion(!document.documentElement.classList.contains('no-motion')));
+
+  // easter egg: ketuk logo 5x = siaran malam
+  let logoClicks = 0, logoTimer = null;
+  $('#logoBtn').addEventListener('click', () => {
+    logoClicks++;
+    clearTimeout(logoTimer);
+    logoTimer = setTimeout(() => { logoClicks = 0; }, 3000);
+    if (logoClicks >= 5) {
+      logoClicks = 0;
+      document.body.classList.toggle('malam');
+      flash(document.body.classList.contains('malam') ? 'Siaran malam menyala — selamat begadang, Mas.' : 'Kembali ke siaran pagi.');
+    }
+  });
+
+  loadState();
+  render();
+  renderRiwayat();
+</script>
+</Layout>

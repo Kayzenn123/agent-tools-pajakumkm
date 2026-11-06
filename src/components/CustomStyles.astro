@@ -1,0 +1,63 @@
+---
+// Token warna + font PajakUMKM (seed 2027-01-08): dark/complementary hue 114.
+// Kontras AA terverifikasi: text/bg 15.74, muted/bg 5.82, accent/bg 6.21, pop/bg 8.70.
+// Aturan: JANGAN teks terang di atas accent (2.54) — teks di atas accent pakai warna bg.
+---
+
+<style is:inline>
+  :root {
+    --px-bg: oklch(0.18 0.056 114);
+    --px-surface: oklch(0.21 0.04 114);
+    --px-text: oklch(0.94 0.02 114);
+    --px-muted: oklch(0.65 0.03 114);
+    --px-accent: oklch(0.72 0.253 294);
+    --px-accent-2: oklch(0.62 0.226 294);
+    --px-pop: oklch(0.82 0.247 291);
+    --px-grid: oklch(0.94 0.02 114 / 0.07);
+    --px-grid-big: oklch(0.94 0.02 114 / 0.14);
+
+    --font-display: var(--font-jaini);
+    --font-body: var(--font-noto-sans-thai);
+    --font-accent: var(--font-ruthie);
+
+    --aw-font-sans: var(--font-noto-sans-thai);
+    --aw-font-serif: var(--font-jaini);
+    --aw-font-heading: var(--font-jaini);
+
+    --aw-color-primary: var(--px-accent);
+    --aw-color-secondary: var(--px-accent-2);
+    --aw-color-accent: var(--px-pop);
+
+    --aw-color-text-heading: var(--px-text);
+    --aw-color-text-default: var(--px-text);
+    --aw-color-text-muted: var(--px-muted);
+    --aw-color-bg-page: var(--px-bg);
+
+    --aw-color-bg-page-dark: var(--px-bg);
+
+    ::selection {
+      background-color: var(--px-accent);
+      color: var(--px-bg);
+    }
+  }
+
+  .dark {
+    --aw-font-sans: var(--font-noto-sans-thai);
+    --aw-font-serif: var(--font-jaini);
+    --aw-font-heading: var(--font-jaini);
+
+    --aw-color-primary: var(--px-accent);
+    --aw-color-secondary: var(--px-accent-2);
+    --aw-color-accent: var(--px-pop);
+
+    --aw-color-text-heading: var(--px-text);
+    --aw-color-text-default: var(--px-text);
+    --aw-color-text-muted: var(--px-muted);
+    --aw-color-bg-page: var(--px-bg);
+
+    ::selection {
+      background-color: var(--px-accent);
+      color: var(--px-bg);
+    }
+  }
+</style>
